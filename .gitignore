@@ -1,0 +1,11 @@
+*.d/*
+.env
+.idea
+config.local.mk
+
+
+
+.aws/config
+.aws/credentials
+
+

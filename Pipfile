@@ -5,6 +5,7 @@ name = "pypi"
 
 [packages]
 python-dotenv = "*"
+cython = "*" # for pybloomfiltermmap3
 smart-open = {extras = ["s3"]}
 pybloomfiltermmap3 = "*"
 jsonlines = "*"

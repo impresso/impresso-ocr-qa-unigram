@@ -224,18 +224,20 @@ class OcrQABloomProcessor(object):
         if bloomdict.startswith("hf://"):
             model_id, filename = split_hf_path(bloomdict)
             logging.info(
-                "Downloading model from Hugging Face Hub: model_id: %s filename: %s",
+                "Downloading model from Hugging Face Hub (or cache): model_id: %s"
+                " filename: %s",
                 model_id,
                 filename,
             )
             # Authenticate with Hugging Face Hub if necessary
-            token = os.getenv("HF_API_TOKEN")
+            # token = os.getenv("HF_API_TOKEN")
             local_path = hf_hub_download(
-                repo_id=model_id, filename=filename, use_auth_token=token
+                repo_id=model_id, filename=filename  # , use_auth_token=token
             )
             return BloomFilter.open(local_path)
         else:
             return BloomFilter.open(bloomdict)
+        logging.info("Loaded Bloom filter from %s", bloomdict)
 
     def get_subtokens(self, line: str) -> Dict[str, Any]:
         """Extract subtokens from the input line."""

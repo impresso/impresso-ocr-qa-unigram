@@ -460,10 +460,10 @@ class OcrQABloomProcessor(object):
             result["ocrqa"] = result["ocrqa_unk_type_ratio"]
 
         if self.verbose_output:
-            known_counter: Counter[str] = collections.Counter(
-                subtok for subtok in sorted(subtoks_list) if subtok in bf
-            )
-            result["known_freq"] = known_counter
+            # known_counter: Counter[str] = collections.Counter(
+            #    subtok for subtok in sorted(subtoks_list) if subtok in bf
+            # )
+            # result["known_freq"] = known_counter
             unknown_counter: Counter[str] = collections.Counter(
                 subtok for subtok in sorted(subtoks_list) if subtok not in bf
             )

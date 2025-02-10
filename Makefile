@@ -99,7 +99,9 @@ PHONY_TARGETS += help
 ###
 # INCLUDES AND CONFIGURATION FILES
 #------------------------------------------------------------------------------
-
+# Load general setup
+include cookbook/setup.mk
+include cookbook/setup_python.mk
 # Load newspaper list configuration and processing rules
 include cookbook/newspaper_list.mk
 
@@ -112,8 +114,7 @@ include cookbook/paths_langident.mk
 # Load output path definitions for ocr quality assessment
 include cookbook/paths_ocrqa.mk
 
-# Load general setup
-include cookbook/setup.mk
+
 
 # Load setup rules for ocr quality assessment
 #include cookbook/setup_ocrqa.mk

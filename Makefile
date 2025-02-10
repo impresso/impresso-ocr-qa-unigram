@@ -147,6 +147,7 @@ include cookbook/clean.mk
 # PROCESSING TARGETS
 #------------------------------------------------------------------------------
 include cookbook/processing.mk
+
 # Include main ocr quality assessment processing rules
 include cookbook/processing_ocrqa.mk
 

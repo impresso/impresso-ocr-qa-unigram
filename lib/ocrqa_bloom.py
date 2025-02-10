@@ -172,6 +172,12 @@ class OcrQABloomProcessor(object):
         self.log_level: str = options.log_level
         self.methods: List[str] = options.methods
         self.timestamp: str = get_timestamp()
+        self.min_subtokens: int = options.min_subtokens
+        self.git_version = (
+            self.options.git_version
+            if self.options.git_version
+            else os.environ.get("GIT_VERSION", None)
+        )
         self.S3_CLIENT = (
             get_s3_client()
             if any(input_file.startswith("s3://") for input_file in self.input)
@@ -291,6 +297,10 @@ class OcrQABloomProcessor(object):
         """Process a single line of input."""
         subtoks_info: Dict[str, Any] = self.get_subtokens(line)
         subtoks_list: List[str] = subtoks_info["subtokens"]
+
+        if len(subtoks_list) < self.min_subtokens:
+            return []
+
         results: List[Dict[str, Any]] = []
         best_result_index: int = -1
         best_ocrqa_value: float = -1.0
@@ -344,7 +354,14 @@ class OcrQABloomProcessor(object):
                     results.append(result)
 
         if self.options.keep_best and best_result_index != -1:
-            results = [results[best_result_index]]
+            best_result = results[best_result_index]
+            if "ocrqa_slc" in best_result:
+                self.ocrqa_stats.append(best_result["ocrqa_slc"])
+            elif "ocrqa_unk_ratio" in best_result:
+                self.ocrqa_stats.append(best_result["ocrqa_unk_ratio"])
+            elif "ocrqa_unk_type_ratio" in best_result:
+                self.ocrqa_stats.append(best_result["ocrqa_unk_type_ratio"])
+            results = [best_result]
 
         return results
 
@@ -383,7 +400,10 @@ class OcrQABloomProcessor(object):
             "bloom": self.options.bloomdicts[lang_index],
             "subtokens": len(subtoks_list),
             "timestamp": self.timestamp,
+            "git_version": self.git_version,
         }
+        if self.git_version:
+            result["git_version"] = self.git_version
         if "slc" in self.methods:
             ocrqa_slc: float = self.compute_ocrqa_slc(subtoks_list, bf, lang_index)
             self.ocrqa_stats.append(ocrqa_slc)
@@ -408,6 +428,16 @@ class OcrQABloomProcessor(object):
             ):
                 best_ocrqa_value = ocrqa_unk_type_ratio
                 best_result_index = len(results)
+
+        # Store the value of the first method in --methods as "ocrqa"
+        first_method = self.methods[0]
+        if first_method == "slc":
+            result["ocrqa"] = result["ocrqa_slc"]
+        elif first_method == "unk_ratio":
+            result["ocrqa"] = result["ocrqa_unk_ratio"]
+        elif first_method == "unk_type_ratio":
+            result["ocrqa"] = result["ocrqa_unk_type_ratio"]
+
         if self.verbose_output:
             known_counter: Counter[str] = collections.Counter(
                 subtok for subtok in sorted(subtoks_list) if subtok in bf
@@ -430,7 +460,7 @@ class OcrQABloomProcessor(object):
                 transport_params = {"client": get_s3_client()}
             else:
                 transport_params = {}
-            logging.warning("LOG Reading documents from %s", input_file)
+            logging.debug("Processing %s", input_file)
             with smart_open(
                 input_file, "r", encoding="utf-8", transport_params=transport_params
             ) as f:
@@ -456,6 +486,7 @@ class OcrQABloomProcessor(object):
 
             if self.options.keep_timestamp_only:
                 keep_timestamp_only(self.options.output)
+        logging.info("Finished processing %s", input_files)
 
 
 def parse_arguments(args: Optional[List[str]] = None) -> argparse.Namespace:
@@ -607,6 +638,24 @@ def parse_arguments(args: Optional[List[str]] = None) -> argparse.Namespace:
             " and --quit-if-s3-output-exists flag."
         ),
     )
+    parser.add_argument(
+        "--min-subtokens",
+        type=int,
+        default=10,
+        help=(
+            "Minimum number of subtokens required to create a value. A subtoken is a"
+            " token that remains after applying some ocrqa-specific masking and"
+            " splitting. (default: %(default)s)"
+        ),
+    )
+    parser.add_argument(
+        "--git-version",
+        help=(
+            "Set the git version to include in the output. If not set, the GIT_VERSION"
+            " environment variable is used."
+            "Normally the output of `git describe --tags --always` is used."
+        ),
+    )
 
     return parser.parse_args(args)
 
@@ -642,8 +691,9 @@ def main(args: Optional[Sequence[str]] = None) -> None:
         args: Command-line arguments (uses sys.argv if None)
     """
     options: argparse.Namespace = parse_arguments(args)
-    logging.info("Calling OCR QA Bloom Processor with options: %s", options)
+
     setup_logging(options.log_level, options.log_file)
+    logging.info("Calling OCR QA Bloom Processor with options: %s", options)
     if not options.bloomdicts:
         logging.error("WARNING: No bloom dictionaries provided; cannot perform OCR QA")
         sys.exit(1)

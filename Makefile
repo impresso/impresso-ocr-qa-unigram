@@ -1,51 +1,36 @@
-# Makefile for linguistic processing for newspapers
-# Read the README.md for more information on how to use this Makefile.
-# Or run `make` for online help.
 
-###
-# SETTINGS FOR THE MAKE PROGRAM
-
-# Define the shell to use for executing commands
-SHELL := /bin/dash
-
-# Enable strict error handling
-export SHELLOPTS := errexit:pipefail
-
-# Keep intermediate files generated for the build process
-.SECONDARY:
-
-# Delete intermediate files if the target fails
-.DELETE_ON_ERROR:
-
-# Suppress all default rules
-.SUFFIXES:
-
-# A variable for representing an empty string
-EMPTY :=
-#  we cannot use log.debug here because it is not defined yet.
-#  $(call log.debug, EMPTY)
-
-###
-# SETTINGS FOR THE BUILD PROCESS
-
-# Load local config if it exists (ignore silently if it does not exist)
--include config.local.mk
+#### ENABLE LOGGING FIRST
+#### OVERWRITE THE LOGGING LEVEL VARIABLE IN THE .env FILE or config.local.mk
+LOGGING_LEVEL ?= INFO
 
 # Load our make logging functions
 include cookbook/log.mk
 
-# Set the logging level: DEBUG, INFO, WARNING, ERROR
-LOGGING_LEVEL ?= INFO
+# USER-VARIABLE: CONFIG_LOCAL_MAKE
+# Defines the name of the local configuration file to include.
+#
+# This file is used to override default settings and provide local configuration. If a
+# file with this name exists in the current directory, it will be included. If the file
+# does not exist, it will be silently ignored. Never add the file called config.local.mk
+# to the repository! If you have stored config files in the repository set the
+# CONFIG_LOCAL_MAKE variable to a different name.
+CONFIG_LOCAL_MAKE ?= config.local.mk
+
+# Load local config if it exists (ignore silently if it does not exists)
+-include $(CONFIG_LOCAL_MAKE)
+
+
+# Now we can use the logging functions
   $(call log.info, LOGGING_LEVEL)
 
-# Keep make output concise for longish recipes
-ifeq "$(filter DEBUG,$(LOGGING_LEVEL))" "DEBUG"
-  $(call log.debug, LOGGING_LEVEL)
-  MAKE_SILENCE_RECIPE ?= $(EMPTY)
-else
-  MAKE_SILENCE_RECIPE ?= @
-endif
-  $(call log.debug, MAKE_SILENCE_RECIPE)
+# BASIC CONFIGURATION AND SETTINGS FOR THE MAKE PROGRAM
+include cookbook/make_settings.mk
+
+# OVERWRITE THE SHELL VARIABLE here if you need to use a different shell than /bin/dash
+# SHELL := /bin/bash
+
+###
+# SETTINGS FOR THE BUILD PROCESS
 
 
 # Set the number of parallel launches of newspapers (uses xargs)

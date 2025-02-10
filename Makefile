@@ -102,6 +102,7 @@ PHONY_TARGETS += help
 # Load general setup
 include cookbook/setup.mk
 include cookbook/setup_python.mk
+include cookbook/setup_ocrqa.mk
 # Load newspaper list configuration and processing rules
 include cookbook/newspaper_list.mk
 

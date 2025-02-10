@@ -50,12 +50,12 @@ endif
 
 # Set the number of parallel launches of newspapers (uses xargs)
 # Note: For efficient parallelization the number of cores should be PARALLEL_NEWSPAPERS * MAKE_PARALLEL_PROCESSING_NEWSPAPER_YEAR
-PARALLEL_NEWSPAPERS ?= 1
-  $(call log.debug, PARALLEL_NEWSPAPERS)
+#PARALLEL_NEWSPAPERS ?= 1
+#  $(call log.debug, PARALLEL_NEWSPAPERS)
 
 # Set the number of parallel jobs of newspaper-year files to process
-MAKE_PARALLEL_PROCESSING_NEWSPAPER_YEAR ?= 1 
-  $(call log.debug, MAKE_PARALLEL_PROCESSING_NEWSPAPER_YEAR)
+#  $(call log.debug, MAKE_PARALLEL_PROCESSING_NEWSPAPER_YEAR)
+#MAKE_PARALLEL_PROCESSING_NEWSPAPER_YEAR ?= 1 
 
 
 # Get the current git version

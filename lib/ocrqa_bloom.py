@@ -322,7 +322,8 @@ class OcrQABloomProcessor(object):
 
         if lang:
             if lang not in self.languages:
-                logging.warning(
+                self.lang_stats[f"missing-dict-for-{lang}"] += 1
+                logging.debug(
                     "No bloomdict for language %s: content item: %s", lang, docid
                 )
                 return results

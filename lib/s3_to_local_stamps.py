@@ -318,6 +318,9 @@ def upload_file_to_s3(
         s3_path (str): The destination S3 path.
         force_overwrite (bool): Whether to overwrite the file on S3 if it already exists.
     """
+    if not s3_path.startswith("s3://"):
+        log.error("The s3_path must start with 's3://'.")
+        sys.exit(1)
     bucket, key = parse_s3_path(s3_path)
     if not force_overwrite and s3_file_exists(s3_client, bucket, key):
         log.warning(f"The file s3://{bucket}/{key} already exists. Skipping upload.")
@@ -353,6 +356,7 @@ def upload_file_to_s3(
         log.error("Incomplete credentials provided.")
     except Exception as e:
         log.error(f"An error occurred: {e}")
+        logging.error(traceback.format_exc())
 
 
 def s3_file_exists(s3_client, bucket_or_path: str, key: str = None) -> bool:

@@ -184,6 +184,7 @@ class OcrQABloomProcessor(object):
             or str(self.options.lid).startswith("s3://")
             else None
         )
+        self.lang_stats: Dict[str, int] = collections.defaultdict(int)
         if not options.s3_output_dry_run:
             # Check if the output file already exists in S3 and avoid lengthy processing
             if self.options.quit_if_s3_output_exists and (
@@ -304,8 +305,11 @@ class OcrQABloomProcessor(object):
         results: List[Dict[str, Any]] = []
         best_result_index: int = -1
         best_ocrqa_value: float = -1.0
+        # Treat the case where there is only one method as if keep_best is set
         keep_best_method: Optional[str] = (
-            self.methods[0] if self.options.keep_best else None
+            self.methods[0]
+            if self.options.keep_best or len(self.methods) == 1
+            else None
         )
 
         docid = subtoks_info["id"]
@@ -334,6 +338,7 @@ class OcrQABloomProcessor(object):
                 best_result_index,
                 results,
             )
+            self.lang_stats[lang] += 1
             if result:
                 results.append(result)
         else:
@@ -350,10 +355,13 @@ class OcrQABloomProcessor(object):
                     best_result_index,
                     results,
                 )
+                self.lang_stats[lang] += 1
                 if result:
                     results.append(result)
 
-        if self.options.keep_best and best_result_index != -1:
+        if (
+            self.options.keep_best or len(self.methods) == 1
+        ) and best_result_index != -1:
             best_result = results[best_result_index]
             if "ocrqa_slc" in best_result:
                 self.ocrqa_stats.append(best_result["ocrqa_slc"])
@@ -362,6 +370,15 @@ class OcrQABloomProcessor(object):
             elif "ocrqa_unk_type_ratio" in best_result:
                 self.ocrqa_stats.append(best_result["ocrqa_unk_type_ratio"])
             results = [best_result]
+        else:
+            # Ensure stats are appended even if keep_best is not set
+            for result in results:
+                if "ocrqa_slc" in result:
+                    self.ocrqa_stats.append(result["ocrqa_slc"])
+                elif "ocrqa_unk_ratio" in result:
+                    self.ocrqa_stats.append(result["ocrqa_unk_ratio"])
+                elif "ocrqa_unk_type_ratio" in result:
+                    self.ocrqa_stats.append(result["ocrqa_unk_type_ratio"])
 
         return results
 
@@ -397,6 +414,7 @@ class OcrQABloomProcessor(object):
         result: Dict[str, Any] = {
             "ci_id": subtoks_info["id"],
             "lg": lang,
+            "ocrqa": None,
             "bloom": self.options.bloomdicts[lang_index],
             "subtokens": len(subtoks_list),
             "timestamp": self.timestamp,
@@ -473,7 +491,14 @@ class OcrQABloomProcessor(object):
                             )
         if len(self.ocrqa_stats) > 0:
             logging.info(
-                "#MEANOCRQA\t%f", sum(self.ocrqa_stats) / len(self.ocrqa_stats)
+                "STATS-MEANOCRAQ\t%f", sum(self.ocrqa_stats) / len(self.ocrqa_stats)
+            )
+        else:
+            logging.info("No OCRQA computed")
+
+        for lang, count in self.lang_stats.items():
+            logging.info(
+                "STATS-OCRAQED-LANGUAGE %s: %d content items OCR QA-ed", lang, count
             )
         if self.options.output:
             output_file.close()

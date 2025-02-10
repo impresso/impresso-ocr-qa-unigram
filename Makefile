@@ -79,7 +79,7 @@ NEWSPAPER ?= actionfem
   $(call log.info, NEWSPAPER)
 
 # Help: Show this help message
-help:
+help::
 	@echo "Usage: make <target>"
 	@echo "Targets:"
 	@echo "  setup                 # Prepare the local directories"

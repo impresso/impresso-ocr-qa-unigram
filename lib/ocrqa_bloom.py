@@ -8,7 +8,7 @@ Usage:
     python ocrqa_bloom.py --input input.jsonl --bloomdicts bloom1.bloom bloom2.bloom --languages en fr --methods slc unk_ratio --output results.jsonl --lid langident.json
 
 Options:
-    --logfile FILE            Write log to FILE
+    --log-file FILE           Write log to FILE
     -q, --quiet               Do not print status messages to stderr (default: False)
     -v, --verbose-output      Print verbose output information (default: False)
     -C, --single_letter_cost  Cost for an infrequent single char (default: 0.7)
@@ -22,6 +22,11 @@ Options:
     --keep-best               Keep only the highest OCR value for a given content item using the first method in --methods (default: False)
     --output                  Output file (default: stdout)
     --lid                     Path to language identification file
+    --s3-output-path          S3 path to upload the output file after processing or check if it already exists
+    --quit-if-s3-output-exists
+                              Quit if the output file already exists in the specified S3 bucket
+    --keep-timestamp-only     After uploading to S3, keep only the timestamp of the local output file for data efficiency
+    --s3-output-dry-run       Dry run which suppresses all write operations to s3 and checks whether output files on s3 exist
 
 Example:
     python ocrqa_bloom.py --input input.jsonl --bloomdicts bloom1.bloom bloom2.bloom --languages en fr --methods slc unk_ratio --output results.jsonl --lid langident.json
@@ -36,7 +41,9 @@ Description:
 
     Bloom dictionaries can be specified as local file paths or as references to files in a Hugging Face Hub model directory using the "hf://" prefix.
 
-    Logging can be configured using the --logfile and --log-level options. Verbose output can be printed using the --verbose-output option.
+    Logging can be configured using the --log-file and --log-level options. Verbose output can be printed using the --verbose-output option.
+
+    The script also supports uploading the output file to an S3 bucket, with options to quit if the file already exists, keep only the timestamp of the local file, and perform a dry run to check for existing files without making any changes.
 
 Contact:
     For any questions or issues, please contact simon.clematide@uzh.ch
@@ -55,6 +62,13 @@ import unicodedata
 from huggingface_hub import hf_hub_download
 import os
 import boto3
+from s3_to_local_stamps import (
+    keep_timestamp_only,
+    get_s3_client,
+    s3_file_exists,
+    upload_file_to_s3,
+    get_timestamp,
+)
 
 
 def read_langident(path: str) -> Dict[str, str]:
@@ -84,6 +98,44 @@ def read_langident(path: str) -> Dict[str, str]:
     return result
 
 
+def split_hf_path(hf_path: str) -> Tuple[str, str]:
+    """
+    Split a Hugging Face Hub path into its model ID and filename components.
+
+    Args:
+        hf_path (str): The Hugging Face Hub path in the format "hf://organization/model_id/path/to/file".
+
+    Returns:
+        Tuple[str, str]: A tuple containing the model ID (organization/model_id) and filename path.
+
+    Examples:
+        >>> split_hf_path("hf://impresso-project/OCR-quality-assessment-unigram/path/to/file.bloom")
+        ('impresso-project/OCR-quality-assessment-unigram', 'path/to/file.bloom')
+
+        >>> split_hf_path("hf://another-org/another-repo/somefile.bloom")
+        ('another-org/another-repo', 'somefile.bloom')
+    """
+    if not hf_path.startswith("hf://"):
+        raise ValueError("Invalid Hugging Face Hub path format")
+
+    # Remove the hf:// prefix
+    path = hf_path[5:]
+
+    # Split into components
+    parts = path.split("/", 2)
+    if len(parts) < 3:
+        raise ValueError(
+            "Invalid Hugging Face Hub path format - must include"
+            " organization/model_id/filename"
+        )
+
+    # First two components form the model ID, the rest is the filename path
+    model_id = f"{parts[0]}/{parts[1]}"
+    filename = parts[2]
+
+    return (model_id, filename)
+
+
 class OcrQABloomProcessor(object):
     """OCR Quality Assessment Processor using Bloom Filter."""
 
@@ -105,7 +157,7 @@ class OcrQABloomProcessor(object):
         self.unks: Dict[str, Counter[str]] = {
             bloomdict: collections.Counter() for bloomdict in options.bloomdicts
         }
-        self.logfile: Optional[str] = options.logfile
+        self.logfile: Optional[str] = options.log_file
         self.quiet: bool = options.quiet
         self.verbose_output: bool = options.verbose_output
         self.single_letter_cost: float = options.single_letter_cost
@@ -114,12 +166,61 @@ class OcrQABloomProcessor(object):
         self.unicode_normalization: Optional[str] = options.unicode_normalization
         self.log_level: str = options.log_level
         self.methods: List[str] = options.methods
+        self.timestamp: str = get_timestamp()
+        self.S3_CLIENT = (
+            get_s3_client()
+            if any(input_file.startswith("s3://") for input_file in self.input)
+            or str(self.options.lid).startswith("s3://")
+            else None
+        )
+        if not options.s3_output_dry_run:
+            # Check if the output file already exists in S3 and avoid lengthy processing
+            if self.options.quit_if_s3_output_exists and (
+                s3out := self.options.s3_output_path
+            ):
+                if s3_file_exists(self.S3_CLIENT, s3out):
+                    logging.warning(
+                        "%s exists. Exiting without processing %s",
+                        s3out,
+                        self.input,
+                    )
+                    exit(3)
+                else:
+                    logging.info(
+                        "%s does not exist. Proceeding with processing.", s3out
+                    )
 
     def load_bloom_filter(self, bloomdict: str) -> BloomFilter:
-        """Load a Bloom filter from a local file or Hugging Face Hub."""
+        """
+        Load a Bloom filter from a local file or Hugging Face Hub.
+
+        This method supports loading Bloom filters from two sources:
+        1. Local file paths.
+        2. Hugging Face Hub model directories using the "hf://" prefix.
+
+        Args:
+            bloomdict (str): The path to the Bloom filter file. This can be a local file path
+                             or a Hugging Face Hub reference in the format "hf://organization/repository/filename".
+
+        Returns:
+            BloomFilter: The loaded Bloom filter object.
+
+        Raises:
+            ValueError: If the bloomdict path is invalid or the file cannot be loaded.
+
+        """
         if bloomdict.startswith("hf://"):
-            model_id, filename = bloomdict[5:].split("/", 1)
-            local_path = hf_hub_download(repo_id=model_id, filename=filename)
+            model_id, filename = split_hf_path(bloomdict)
+            logging.info(
+                "Downloading model from Hugging Face Hub: model_id: %s filename: %s",
+                model_id,
+                filename,
+            )
+            # Authenticate with Hugging Face Hub if necessary
+            token = os.getenv("HF_API_TOKEN")
+            local_path = hf_hub_download(
+                repo_id=model_id, filename=filename, use_auth_token=token
+            )
             return BloomFilter.open(local_path)
         else:
             return BloomFilter.open(bloomdict)
@@ -276,6 +377,7 @@ class OcrQABloomProcessor(object):
             "lg": lang,
             "bloom": self.options.bloomdicts[lang_index],
             "subtokens": len(subtoks_list),
+            "timestamp": self.timestamp,
         }
         if "slc" in self.methods:
             ocrqa_slc: float = self.compute_ocrqa_slc(subtoks_list, bf, lang_index)
@@ -341,6 +443,15 @@ class OcrQABloomProcessor(object):
         if self.options.output:
             output_file.close()
 
+        # Upload the output file to S3 if specified
+        if not self.options.s3_output_dry_run and self.options.s3_output_path:
+            upload_file_to_s3(
+                self.S3_CLIENT, self.options.output, self.options.s3_output_path
+            )
+
+            if self.options.keep_timestamp_only:
+                keep_timestamp_only(self.options.output)
+
 
 def parse_arguments(args: Optional[List[str]] = None) -> argparse.Namespace:
     """Parse command-line arguments.
@@ -357,7 +468,7 @@ def parse_arguments(args: Optional[List[str]] = None) -> argparse.Namespace:
         epilog="Contact simon.clematide@uzh.ch",
     )
     parser.add_argument(
-        "--logfile", dest="logfile", help="write log to FILE", metavar="FILE"
+        "--log-file", dest="log_file", help="write log to FILE", metavar="FILE"
     )
     parser.add_argument(
         "-q",
@@ -462,6 +573,35 @@ def parse_arguments(args: Optional[List[str]] = None) -> argparse.Namespace:
         help="output file (default: %(default)s)",
         default=None,
     )
+    parser.add_argument(
+        "--s3-output-path",
+        help=(
+            "S3 path to upload the output file after processing or check if it already"
+            " exists"
+        ),
+    )
+    parser.add_argument(
+        "--quit-if-s3-output-exists",
+        action="store_true",
+        help="Quit if the output file already exists in the specified S3 bucket",
+    )
+    parser.add_argument(
+        "--keep-timestamp-only",
+        action="store_true",
+        help=(
+            "After uploading to S3, keep only the timestamp of the local output file"
+            " for data efficiency. Defaults: %(default)s"
+        ),
+    )
+    parser.add_argument(
+        "--s3-output-dry-run",
+        action="store_true",
+        help=(
+            "Dry run which suppresses all write operations to s3 and checks whether"
+            " output files on s3 exist. Implies also unsetting --keep-timestamp-only"
+            " and --quit-if-s3-output-exists flag."
+        ),
+    )
 
     return parser.parse_args(args)
 
@@ -513,7 +653,7 @@ def main(args: Optional[Sequence[str]] = None) -> None:
         args: Command-line arguments (uses sys.argv if None)
     """
     options: argparse.Namespace = parse_arguments(args)
-    setup_logging(options.log_level, options.logfile)
+    setup_logging(options.log_level, options.log_file)
     if not options.bloomdicts:
         logging.error("WARNING: No bloom dictionaries provided; cannot perform OCR QA")
         sys.exit(1)

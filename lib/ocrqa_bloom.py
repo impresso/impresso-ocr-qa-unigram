@@ -61,7 +61,10 @@ from ocrqa_normalization import subtokens
 import unicodedata
 from huggingface_hub import hf_hub_download
 import os
-import boto3
+from dotenv import load_dotenv
+
+
+import traceback
 from s3_to_local_stamps import (
     keep_timestamp_only,
     get_s3_client,
@@ -69,6 +72,8 @@ from s3_to_local_stamps import (
     upload_file_to_s3,
     get_timestamp,
 )
+
+load_dotenv()
 
 
 def read_langident(path: str) -> Dict[str, str]:
@@ -630,22 +635,6 @@ def setup_logging(log_level: str, log_file: Optional[str]) -> None:
     )
 
 
-def get_s3_client() -> "boto3.client":
-    """Returns a boto3.client object for interacting with S3.
-
-    Returns:
-        boto3.client: A boto3.client object for interacting with S3.
-    """
-    boto3.setup_default_session(
-        aws_access_key_id=os.getenv("SE_ACCESS_KEY"),
-        aws_secret_access_key=os.getenv("SE_SECRET_KEY"),
-    )
-
-    return boto3.client(
-        "s3", endpoint_url=os.getenv("SE_HOST_URL", "https://os.zhdk.cloud.switch.ch/")
-    )
-
-
 def main(args: Optional[Sequence[str]] = None) -> None:
     """Main function to run the OCR QA process.
 
@@ -653,6 +642,7 @@ def main(args: Optional[Sequence[str]] = None) -> None:
         args: Command-line arguments (uses sys.argv if None)
     """
     options: argparse.Namespace = parse_arguments(args)
+    logging.info("Calling OCR QA Bloom Processor with options: %s", options)
     setup_logging(options.log_level, options.log_file)
     if not options.bloomdicts:
         logging.error("WARNING: No bloom dictionaries provided; cannot perform OCR QA")
@@ -662,9 +652,10 @@ def main(args: Optional[Sequence[str]] = None) -> None:
         processor.run()
     except Exception as e:
         logging.error(f"An error occurred: {e}")
+        logging.error(traceback.format_exc())
         sys.exit(1)
 
 
 if __name__ == "__main__":
     main()
-    exit(0)
+    sys.exit(0)

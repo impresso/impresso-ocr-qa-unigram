@@ -474,7 +474,7 @@ class OcrQABloomProcessor(object):
         """Run the OCR QA process."""
         input_files: List[str] = self.options.input if self.options.input else ["-"]
         output_file = (
-            open(self.options.output, "w") if self.options.output else sys.stdout
+            smart_open(self.options.output, "w") if self.options.output else sys.stdout
         )
         for input_file in input_files:
             if input_file.startswith("s3://"):

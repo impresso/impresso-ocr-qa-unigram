@@ -234,10 +234,10 @@ class OcrQABloomProcessor(object):
             local_path = hf_hub_download(
                 repo_id=model_id, filename=filename  # , use_auth_token=token
             )
+            logging.info("Loaded Bloom filter from %s", local_path)
             return BloomFilter.open(local_path)
         else:
             return BloomFilter.open(bloomdict)
-        logging.info("Loaded Bloom filter from %s", bloomdict)
 
     def get_subtokens(self, line: str) -> Dict[str, Any]:
         """Extract subtokens from the input line."""

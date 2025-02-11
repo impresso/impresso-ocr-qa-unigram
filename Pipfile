@@ -1,0 +1,19 @@
+[[source]]
+url = "https://pypi.org/simple"
+verify_ssl = true
+name = "pypi"
+
+[packages]
+python-dotenv = "*"
+cython = "*" # for pybloomfiltermmap3
+smart-open = {extras = ["s3"]}
+pybloomfiltermmap3 = "*"
+jsonlines = "*"
+huggingface_hub = "*"
+# 1.36.... has issues with uploading a file
+boto3 = "==1.35.95"
+[dev-packages]
+ipykernel = "*"
+jupyter = "*"
+[requires]
+python_version = "3.11"

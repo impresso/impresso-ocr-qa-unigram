@@ -1,7 +1,7 @@
 
 #### ENABLE LOGGING FIRST
-#### OVERWRITE THE LOGGING LEVEL VARIABLE IN THE .env FILE or config.local.mk
-LOGGING_LEVEL ?= INFO
+# USER-VARIABLE: LOGGING_LEVEL
+# Defines the logging level for the Makefile.
 
 # Load our make logging functions
 include cookbook/log.mk
@@ -20,7 +20,7 @@ CONFIG_LOCAL_MAKE ?= config.local.mk
 -include $(CONFIG_LOCAL_MAKE)
 
 
-# Now we can use the logging functions
+# Now we can use the logging function to show the current logging level
   $(call log.info, LOGGING_LEVEL)
 
 # BASIC CONFIGURATION AND SETTINGS FOR THE MAKE PROGRAM
@@ -84,10 +84,11 @@ PHONY_TARGETS += help
 ###
 # INCLUDES AND CONFIGURATION FILES
 #------------------------------------------------------------------------------
-# Load general setup
+# Load setup
 include cookbook/setup.mk
 include cookbook/setup_python.mk
 include cookbook/setup_ocrqa.mk
+
 # Load newspaper list configuration and processing rules
 include cookbook/newspaper_list.mk
 
@@ -100,10 +101,6 @@ include cookbook/paths_langident.mk
 # Load output path definitions for ocr quality assessment
 include cookbook/paths_ocrqa.mk
 
-
-
-# Load setup rules for ocr quality assessment
-#include cookbook/setup_ocrqa.mk
 
 ###
 # MAIN TARGETS

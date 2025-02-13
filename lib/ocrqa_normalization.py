@@ -2,7 +2,7 @@ from typing import Optional, List
 import unicodedata
 
 # Quotes and general punctuation
-QUOTES_PUNCT = "„•<>!\"#%&'"
+QUOTES_PUNCT = "„•<>!\"#%&'’"
 
 # Basic ASCII punctuation
 ASCII_PUNCT = "()*,./:;?"

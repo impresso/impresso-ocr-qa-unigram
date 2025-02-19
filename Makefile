@@ -1,3 +1,6 @@
+# Description: Makefile for OCR quality assessment for newspapers
+# Read the README.md for more information on how to use this Makefile.
+# Or run `make` for online help.
 
 #### ENABLE LOGGING FIRST
 # USER-VARIABLE: LOGGING_LEVEL
@@ -5,6 +8,7 @@
 
 # Load our make logging functions
 include cookbook/log.mk
+
 
 # USER-VARIABLE: CONFIG_LOCAL_MAKE
 # Defines the name of the local configuration file to include.
@@ -23,47 +27,8 @@ CONFIG_LOCAL_MAKE ?= config.local.mk
 # Now we can use the logging function to show the current logging level
   $(call log.info, LOGGING_LEVEL)
 
-# BASIC CONFIGURATION AND SETTINGS FOR THE MAKE PROGRAM
-include cookbook/make_settings.mk
 
-# OVERWRITE THE SHELL VARIABLE here if you need to use a different shell than /bin/dash
-# SHELL := /bin/bash
-
-###
-# SETTINGS FOR THE BUILD PROCESS
-
-
-# Set the number of parallel launches of newspapers (uses xargs)
-# Note: For efficient parallelization the number of cores should be PARALLEL_NEWSPAPERS * MAKE_PARALLEL_PROCESSING_NEWSPAPER_YEAR
-#PARALLEL_NEWSPAPERS ?= 1
-#  $(call log.debug, PARALLEL_NEWSPAPERS)
-
-# Set the number of parallel jobs of newspaper-year files to process
-#  $(call log.debug, MAKE_PARALLEL_PROCESSING_NEWSPAPER_YEAR)
-#MAKE_PARALLEL_PROCESSING_NEWSPAPER_YEAR ?= 1 
-
-
-# Get the current git version
-ifndef git_version
-git_version := $(shell git describe --tags --always)
-endif
-  $(call log.info, git_version)
-export git_version
-
-###
-# SETTING DEFAULT VARIABLES FOR THE PROCESSING
-
-# The build directory where all local input and output files are stored
-# The content of BUILD_DIR can be removed anytime without issues regarding s3
-BUILD_DIR ?= build.d
-  $(call log.debug, BUILD_DIR)
-
-# Specify the newspaper to process. Just a suffix appended to the s3 bucket name
-# is ok! Can also be something like actionfem/actionfem-1933 to restrict further
-NEWSPAPER ?= actionfem
-  $(call log.info, NEWSPAPER)
-
-# Help: Show this help message
+#: Show help message
 help::
 	@echo "Usage: make <target>"
 	@echo "Targets:"
@@ -78,13 +43,31 @@ help::
 	@echo "  update-requirements   # Update the requirements.txt file with the current pipenv requirements."
 	@echo "  help                  # Show this help message"
 
+# Default target when no target is specified on the command line
 .DEFAULT_GOAL := help
 PHONY_TARGETS += help
 
-###
-# INCLUDES AND CONFIGURATION FILES
-#------------------------------------------------------------------------------
-# Load setup
+
+# SETTINGS FOR THE MAKE PROGRAM
+include cookbook/make_settings.mk
+
+# If you need to use a different shell than /bin/dash, overwrite it here.
+# SHELL := /bin/bash
+
+
+# SETTINGS FOR THE BUILD PROCESS
+
+# Set the number of parallel launches of newspapers (uses xargs)
+# Note: For efficient parallelization the number of cores should be PARALLEL_NEWSPAPERS * MAKE_PARALLEL_PROCESSING_NEWSPAPER_YEAR
+#PARALLEL_NEWSPAPERS ?= 1
+#  $(call log.debug, PARALLEL_NEWSPAPERS)
+
+# Set the number of parallel jobs of newspaper-year files to process
+#  $(call log.debug, MAKE_PARALLEL_PROCESSING_NEWSPAPER_YEAR)
+#MAKE_PARALLEL_PROCESSING_NEWSPAPER_YEAR ?= 1 
+
+
+# SETUP SETTINGS AND TARGETS
 include cookbook/setup.mk
 include cookbook/setup_python.mk
 include cookbook/setup_ocrqa.mk
@@ -92,57 +75,35 @@ include cookbook/setup_ocrqa.mk
 # Load newspaper list configuration and processing rules
 include cookbook/newspaper_list.mk
 
-# Load input path definitions for rebuilt content
+
+# SETUP PATHS
 include cookbook/paths_rebuilt.mk
-
-# Load input path definitions for language identification
 include cookbook/paths_langident.mk
-
-# Load output path definitions for ocr quality assessment
 include cookbook/paths_ocrqa.mk
 
 
-###
 # MAIN TARGETS
-#------------------------------------------------------------------------------
-
 include cookbook/main_targets.mk
 
-###
+
 # SYNCHRONIZATION TARGETS
-#------------------------------------------------------------------------------
-
 include cookbook/sync.mk
-
-# Include synchronization rules for rebuilt content
 include cookbook/sync_rebuilt.mk
-
-# Include synchronization rules for langident content
 include cookbook/sync_langident.mk
-
-# Include synchronization rules for ocr quality assessment
 include cookbook/sync_ocrqa.mk
 
-# Include cleanup rules
 include cookbook/clean.mk
 
 
-###
 # PROCESSING TARGETS
-#------------------------------------------------------------------------------
 include cookbook/processing.mk
-
-# Include main ocr quality assessment processing rules
 include cookbook/processing_ocrqa.mk
 
 
-
-###
-# FINAL DECLARATIONS AND UTILITIES
-#------------------------------------------------------------------------------
-
-# Declare all targets that don't produce files
-.PHONY: $(PHONY_TARGETS)
-
-# Include path conversion utilities
+# FUNCTION
 include cookbook/local_to_s3.mk
+
+
+# FURTHER ADDONS
+
+.PHONY: $(PHONY_TARGETS)

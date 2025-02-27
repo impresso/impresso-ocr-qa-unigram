@@ -15,5 +15,7 @@ boto3 = "==1.35.95"
 [dev-packages]
 ipykernel = "*"
 jupyter = "*"
+pandas = "*"
+plotly = "*"
 [requires]
 python_version = "3.11"

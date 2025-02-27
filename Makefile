@@ -40,7 +40,6 @@ help::
 	@echo "  resync                # Remove the local synchronization file stamp and sync again."
 	@echo "  clean-build           # Remove the entire build directory"
 	@echo "  clean-newspaper       # Remove the local directory for a single newspaper"
-	@echo "  update-requirements   # Update the requirements.txt file with the current pipenv requirements."
 	@echo "  help                  # Show this help message"
 
 # Default target when no target is specified on the command line

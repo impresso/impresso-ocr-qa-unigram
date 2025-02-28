@@ -4,7 +4,7 @@ import re
 
 PRIVATE_CHAR = "\ue000"  # Private-use Unicode character
 # Apostrophes  Needed for historical luxembourgish texts that use the apostrophe as a letter, see REAME.md
-APOSTROPHES = "’'"
+APOSTROPHES = "’'`"
 
 # Quotes and general punctuation
 QUOTES_PUNCT = '„•<>!"#%&'
@@ -18,8 +18,8 @@ BRACKETS_SPECIAL = "[]\\~_{}"
 # Unicode punctuation (¡«·»¿)
 UNICODE_PUNCT = "\xa1\xab\xb7\xbb\xbf"
 
-# Em dash, caret, apostrophe
-DASH_CARET = "—^`"
+# Em dash, caret
+DASH_CARET = "—^"
 
 # Special symbols (broken bar, section, pound, equals)
 SPECIAL_SYMBOLS = "¦§£="
@@ -111,7 +111,7 @@ def normalize_text(
     # conflicts with the following normalization
 
     if language == "lb":
-        s = re.sub(rf"(?<=[oe])[{APOSTROPHES}]", PRIVATE_CHAR, s)
+        s = re.sub(rf"(?<=[oe])[{APOSTROPHES}](?=\S)", PRIVATE_CHAR, s)
     s = s.translate(NORMALIZATION_TABLE)
     if language == "lb":
         s = s.replace(PRIVATE_CHAR, "'")

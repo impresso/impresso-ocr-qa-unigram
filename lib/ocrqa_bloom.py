@@ -239,15 +239,26 @@ class OcrQABloomProcessor(object):
         else:
             return BloomFilter.open(bloomdict)
 
-    def get_subtokens(self, line: str) -> Dict[str, Any]:
-        """Extract subtokens from the input line."""
+    def get_subtokens(self, line: str, language: str = None) -> Dict[str, Any]:
+        """
+        Extract subtokens from the input line, with optional language-specific processing.
+
+        Args:
+            line (str): The input JSON line
+            language (str, optional): Language code for language-specific tokenization
+
+        Returns:
+            Dict[str, Any]: Dictionary containing document ID and subtokens
+        """
         obj: Dict[str, Any] = json.loads(line)
         result: Dict[str, Any] = {"id": obj.get("id"), "subtokens": []}
         if "ft" in obj:
             ft: str = obj["ft"].lower()
             if self.options.unicode_normalization:
                 ft = unicodedata.normalize(self.options.unicode_normalization, ft)
-            result["subtokens"] = subtokens(ft, unicode_normalize=None)
+            result["subtokens"] = subtokens(
+                ft, language=language, unicode_normalize=None
+            )
         return result
 
     def compute_ocrqa_slc(
@@ -298,28 +309,24 @@ class OcrQABloomProcessor(object):
 
     def process_line(self, line: str) -> List[Dict[str, Any]]:
         """Process a single line of input."""
-        subtoks_info: Dict[str, Any] = self.get_subtokens(line)
-        subtoks_list: List[str] = subtoks_info["subtokens"]
+        obj = json.loads(line)
+        docid = obj.get("id")
 
-        if len(subtoks_list) < self.min_subtokens:
-            return []
+        # Determine language first
+        lang = None
+        if self.lang_ident_data:
+            lang = self.lang_ident_data.get(docid)
 
         results: List[Dict[str, Any]] = []
         best_result_index: int = -1
         best_ocrqa_value: float = -1.0
-        # Treat the case where there is only one method as if keep_best is set
         keep_best_method: Optional[str] = (
             self.methods[0]
             if self.options.keep_best or len(self.methods) == 1
             else None
         )
 
-        docid = subtoks_info["id"]
-        lang = None
-
-        if self.lang_ident_data:
-            lang = self.lang_ident_data.get(docid)
-
+        # Process with language identification
         if lang:
             if lang not in self.languages:
                 self.lang_stats[f"missing-dict-for-{lang}"] += 1
@@ -327,6 +334,13 @@ class OcrQABloomProcessor(object):
                     "No bloomdict for language %s: content item: %s", lang, docid
                 )
                 return results
+
+            # Get subtokens with identified language
+            subtoks_info = self.get_subtokens(line, language=lang)
+            subtoks_list = subtoks_info["subtokens"]
+
+            if len(subtoks_list) < self.min_subtokens:
+                return []
 
             lang_index = self.languages.index(lang)
             bf = self.bloom_filters[lang_index]
@@ -345,8 +359,17 @@ class OcrQABloomProcessor(object):
             if result:
                 results.append(result)
         else:
+            # Process for all languages
             for lang_index, bf in enumerate(self.bloom_filters):
                 lang = self.languages[lang_index]
+
+                # Get subtokens with current language
+                subtoks_info = self.get_subtokens(line, language=lang)
+                subtoks_list = subtoks_info["subtokens"]
+
+                if len(subtoks_list) < self.min_subtokens:
+                    continue
+
                 result, best_ocrqa_value, best_result_index = self.compute_results(
                     subtoks_info,
                     subtoks_list,

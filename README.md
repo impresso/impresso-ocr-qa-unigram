@@ -77,6 +77,32 @@ The default method used for OCR quality assessment is `unk_type_ratio`. This met
 python lib/ocrqa_bloom.py --input input.jsonl --bloomdicts hf://model_id/bloom1.bloom hf://model_id/bloom2.bloom --languages en fr --methods slc unk_ratio --output results.jsonl --lid langident.json
 ```
 
+## Apostrophe Usage After Vowels in Historical Luxembourgish
+
+### **1. Function of the Apostrophe**
+
+- **Indicating long or stressed vowels**
+  - _gro’ss_ → modern _grouss_
+  - _se’er_ → modern _seier_
+- **Marking elision or glottalization**
+  - _ge’nt_, _go’f_, _go’w_ (possible sound loss or separation)
+- **Clarifying pronunciation in loanwords**
+  - _Unio’n_, _situatio’n_, _millio’nen_
+- **Separating prefixes or morphemes**
+  - _ne’deg_ → modern _néideg_
+  - _we’neg_ → modern _wéineg_
+
+### **2. Spelling Reforms and the Apostrophe**
+
+- **Pre-1946**: Apostrophes were common after vowels, often inconsistently.
+- **1946 Reform**: Reduced apostrophe use, favoring phonetic spelling.
+- **1975 Reform**: Further simplification, removing unnecessary markers.
+- **1999 Reform**: Apostrophes after vowels were eliminated, except in contractions (e.g., _d’Kanner_ remains, but _se’er_ → _seier_).
+
+### **3. Summary**
+
+The historical use of apostrophes after vowels served as a **pronunciation guide** for vowel length, stress, and borrowed words. Over time, Luxembourgish orthography **standardized and simplified**, leading to the apostrophe's removal in these contexts.
+
 ## Contact
 
 For any questions or issues, please contact

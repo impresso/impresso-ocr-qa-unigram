@@ -44,7 +44,7 @@ help::
 
 # Default target when no target is specified on the command line
 .DEFAULT_GOAL := help
-PHONY_TARGETS += help
+.PHONY: help
 
 
 # SETTINGS FOR THE MAKE PROGRAM
@@ -104,5 +104,3 @@ include cookbook/local_to_s3.mk
 
 
 # FURTHER ADDONS
-
-.PHONY: $(PHONY_TARGETS)

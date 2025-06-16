@@ -103,6 +103,13 @@ python lib/ocrqa_bloom.py --input input.jsonl --bloomdicts hf://model_id/bloom1.
 
 The historical use of apostrophes after vowels served as a **pronunciation guide** for vowel length, stress, and borrowed words. Over time, Luxembourgish orthography **standardized and simplified**, leading to the apostrophe's removal in these contexts.
 
+## Produce Extended output of Finding Unknown Words
+
+```sh
+# for a newspaper and Luxembourgish
+CONFIG_LOCAL_MAKE=cookbook-repo-addons/config-lb-unknowns.mk  make all
+```
+
 ## Contact
 
 For any questions or issues, please contact

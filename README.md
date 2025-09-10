@@ -19,7 +19,7 @@ brew upgrade && brew install git git-lfs make
 1. Clone the repository:
 
    ```sh
-   git clone --recursive https://github.com/your-repo/impresso-ocr-qa-unigram.git
+   git clone --recursive https://github.com/impresso/impresso-ocr-qa-unigram.git
    cd impresso-ocr-qa-unigram
    ```
 

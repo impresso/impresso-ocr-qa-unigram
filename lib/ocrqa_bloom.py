@@ -239,6 +239,41 @@ class OcrQABloomProcessor(object):
         else:
             return BloomFilter.open(bloomdict)
 
+    def compute_subtoken_char_ratio(
+        self, subtoks_list: List[str], char_length: int
+    ) -> float:
+        """
+        Compute the ratio of number of subtokens to character length of original text.
+
+        This metric helps identify content with poor OCR quality that results in excessive
+        fragmentation of text into short, meaningless tokens.
+
+        A high ratio indicates many short/meaningless tokens (numbers, single letters).
+        A low ratio indicates fewer, longer meaningful tokens.
+
+        Reading example:
+        - A ratio of 0.173 means there are 17.3 subtokens per 100 characters
+        - For a 500-character text with ratio 0.173: ~87 subtokens (good quality)
+        - For a 500-character text with ratio 0.350: ~175 subtokens (poor quality)
+
+        Typical ranges:
+        - 0.08-0.15: Good OCR quality (longer meaningful words)
+        - 0.15-0.25: Moderate OCR quality (some fragmentation)
+        - 0.25+: Poor OCR quality (heavy fragmentation into short tokens)
+
+        Args:
+            subtoks_list (List[str]): List of subtokens extracted from the text
+            char_length (int): Character length of the original text
+
+        Returns:
+            float: Ratio of subtoken count to character length (rounded to 3 decimal places)
+        """
+        if char_length == 0:
+            return 0.0
+
+        subtoken_count = len(subtoks_list)
+        return round(subtoken_count / char_length, 3)
+
     def get_subtokens(self, line: str, language: str = None) -> Dict[str, Any]:
         """
         Extract subtokens from the input line, with optional language-specific processing.
@@ -248,10 +283,14 @@ class OcrQABloomProcessor(object):
             language (str, optional): Language code for language-specific tokenization
 
         Returns:
-            Dict[str, Any]: Dictionary containing document ID and subtokens
+            Dict[str, Any]: Dictionary containing document ID, subtokens, and char length
         """
         obj: Dict[str, Any] = json.loads(line)
-        result: Dict[str, Any] = {"id": obj.get("id"), "subtokens": []}
+        result: Dict[str, Any] = {
+            "id": obj.get("id"),
+            "subtokens": [],
+            "char_length": 0,
+        }
         if "ft" in obj:
             ft: str = obj["ft"].lower()
             if self.options.unicode_normalization:
@@ -259,6 +298,7 @@ class OcrQABloomProcessor(object):
             result["subtokens"] = subtokens(
                 ft, language=language, unicode_normalize=None
             )
+            result["char_length"] = len(ft)
         return result
 
     def compute_ocrqa_slc(
@@ -448,6 +488,13 @@ class OcrQABloomProcessor(object):
         }
         if self.git_version:
             result["git_version"] = self.git_version
+
+        # Compute subtoken-to-character ratio
+        subtoken_char_ratio = self.compute_subtoken_char_ratio(
+            subtoks_list, subtoks_info.get("char_length", 0)
+        )
+        result["subtoken_char_ratio"] = subtoken_char_ratio
+
         if "slc" in self.methods:
             ocrqa_slc: float = self.compute_ocrqa_slc(subtoks_list, bf, lang_index)
             self.ocrqa_stats.append(ocrqa_slc)

@@ -10,6 +10,7 @@ fsspec==2025.9.0; python_version >= '3.9'
 hf-xet==1.1.9; python_version >= '3.8'
 huggingface-hub==0.34.4; python_full_version >= '3.8.0'
 idna==3.10; python_version >= '3.6'
+-e ./cookbook/lib
 jmespath==1.0.1; python_version >= '3.7'
 jq==1.10.0; python_version >= '3.8'
 jsonlines==4.0.0; python_version >= '3.8'

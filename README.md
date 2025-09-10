@@ -39,8 +39,13 @@ bash cookbook/install_brew.sh
    # edit .env with the s3 credentials
 
    ```
+5. Create pipenv environment
 
-3. Install the required dependencies:
+   ```sh
+   pipenv shell
+
+   ```
+6. Install the required dependencies:
 
    ```sh
    make setup

@@ -39,10 +39,10 @@ bash cookbook/install_brew.sh
    # edit .env with the s3 credentials
 
    ```
-5. Create pipenv environment
+5. Create pipenv Python environment in project `.venv` subdirectory for separable installs
 
    ```sh
-   pipenv shell
+   PIPENV_VENV_IN_PROJECT=enabled pipenv shell 
 
    ```
 6. Install the required dependencies:

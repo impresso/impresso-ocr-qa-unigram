@@ -1,0 +1,5 @@
+SE_ACCESS_KEY=
+SE_SECRET_KEY=
+SE_HOST_URL=https://os.zhdk.cloud.switch.ch/
+# for separability, let's have the huggingface models locally here
+HF_HOME=hf.d

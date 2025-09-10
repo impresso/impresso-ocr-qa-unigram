@@ -10,12 +10,14 @@ smart-open = {extras = ["s3"]}
 pybloomfiltermmap3 = "*"
 jsonlines = "*"
 huggingface_hub = "*"
-# 1.36.... has issues with uploading a file
 boto3 = "==1.35.95"
+jq = "*"
+
 [dev-packages]
 ipykernel = "*"
 jupyter = "*"
 pandas = "*"
 plotly = "*"
+
 [requires]
 python_version = "3.11"

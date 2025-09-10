@@ -57,13 +57,13 @@ include cookbook/make_settings.mk
 # SETTINGS FOR THE BUILD PROCESS
 
 # Set the number of parallel launches of newspapers (uses xargs)
-# Note: For efficient parallelization the number of cores should be PARALLEL_NEWSPAPERS * MAKE_PARALLEL_PROCESSING_NEWSPAPER_YEAR
-#PARALLEL_NEWSPAPERS ?= 1
-#  $(call log.debug, PARALLEL_NEWSPAPERS)
+# Note: For efficient parallelization the number of cores should be COLLECTION_JOBS * NEWSPAPER_JOBS
+#COLLECTION_JOBS ?= 1
+#  $(call log.debug, COLLECTION_JOBS)
 
 # Set the number of parallel jobs of newspaper-year files to process
-#  $(call log.debug, MAKE_PARALLEL_PROCESSING_NEWSPAPER_YEAR)
-#MAKE_PARALLEL_PROCESSING_NEWSPAPER_YEAR ?= 1 
+#  $(call log.debug, NEWSPAPER_JOBS)
+#NEWSPAPER_JOBS ?= 1 
 
 
 # SETUP SETTINGS AND TARGETS
@@ -104,3 +104,4 @@ include cookbook/local_to_s3.mk
 
 
 # FURTHER ADDONS
+include cookbook-repo-addons/sampling-good-articles.mk

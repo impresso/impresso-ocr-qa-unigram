@@ -23,7 +23,16 @@ brew upgrade && brew install git git-lfs make
    cd impresso-ocr-qa-unigram
    ```
 
-2. Configure the installation:
+2. Make sure system-level Python environment is complete.
+
+```sh
+# Ubuntu or Debian
+bash cookbook/install_apt.sh
+# MacOS assuming a working Homebrew installation
+bash cookbook/install_brew.sh
+```
+
+4. Configure the installation:
 
    ```sh
    cp cookbook/dotenv.sample .env

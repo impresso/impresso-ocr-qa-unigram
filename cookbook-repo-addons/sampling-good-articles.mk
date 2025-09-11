@@ -11,10 +11,10 @@ sampled-files: $(BUILD_DIR)/sampling/ocrqa-highscores-data-de.jsonl.bz2
 $(BUILD_DIR)/sampling/ocrqa-highscores-%.jsonl:
 	@mkdir -p $(dir $@)
 	python3 cookbook/lib/s3_sampler.py \
-		--s3-prefix s3://42-processed-data-final/ocrqa/ocrqa-ocrqa-wp_v1.0.6_v1-0-0/ \
+		--s3-prefix s3://42-processed-data-final/ocrqa/ocrqa-ocrqa-wp_v1.0.6_v1-0-1/ \
 		--output $@ \
-		--filter-expr 'select(.ocrqa_unk_type_ratio > 0.95 and .lg == "$*" and .subtokens > 100)' \
-		--transform-expr '{ci_id: .ci_id, lg: .lg, ocrqa: .ocrqa_unk_type_ratio, subtokens:.subtokens}' \
+		--filter-expr 'select(.ocrqa_unk_type_ratio > 0.95 and .lg == "$*" and .subtokens > 100 and .subtoken_char_ratio < 0.2)' \
+		--transform-expr '{ci_id: .ci_id, lg: .lg, ocrqa: .ocrqa_unk_type_ratio, subtokens:.subtokens,subtoken_char_ratio:.subtoken_char_ratio}' \
 		--group-by-expr '.ci_id | split("-") | .[0] + "-" + .[1]' \
 		--max-samples-per-group 20 \
 		--record-id-field ci_id \

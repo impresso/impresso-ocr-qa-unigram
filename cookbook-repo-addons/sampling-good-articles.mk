@@ -20,7 +20,8 @@ $(BUILD_DIR)/sampling/ocrqa-highscores-%.jsonl:
 		--record-id-field ci_id \
 		--random-seed 42 \
 		--log-level INFO \
-		--output $@
+		--output $@16011sc__
+		
 
 
 $(BUILD_DIR)/sampling/ocrqa-highscores-data-%.jsonl.bz2: $(BUILD_DIR)/sampling/ocrqa-highscores-%.jsonl

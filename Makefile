@@ -99,9 +99,6 @@ include cookbook/processing.mk
 include cookbook/processing_ocrqa.mk
 
 
-# FUNCTION
-include cookbook/local_to_s3.mk
-
 
 # FURTHER ADDONS
 include cookbook-repo-addons/sampling-good-articles.mk

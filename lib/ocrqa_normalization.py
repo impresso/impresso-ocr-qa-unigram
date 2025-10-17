@@ -119,10 +119,16 @@ def normalize_text(
 
 
 def subtokens(
-    w: str, language: str = None, unicode_normalize: Optional[str] = "NFKC"
+    w: str,
+    language: str = None,
+    unicode_normalize: Optional[str] = "NFKC",
+    min_length: int = 1,
 ) -> List[str]:
     """Normalize and tokenize a word."""
     w = normalize_text(
         w, language, unicode_normalize
     )  # Apply punctuation and digit normalization
-    return w.split()  # Tokenize by whitespace
+    tokens = w.split()
+    if min_length <= 1:
+        return tokens
+    return [tok for tok in tokens if len(tok) >= min_length]

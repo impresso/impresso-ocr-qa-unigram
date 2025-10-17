@@ -173,6 +173,9 @@ class OcrQABloomProcessor(object):
         self.methods: List[str] = options.methods
         self.timestamp: str = get_timestamp()
         self.min_subtokens: int = options.min_subtokens
+        self.min_subtoken_length: int = options.min_subtoken_length
+        if self.min_subtoken_length < 1:
+            raise ValueError("min_subtoken_length must be at least 1")
         self.git_version = (
             self.options.git_version
             if self.options.git_version
@@ -296,7 +299,10 @@ class OcrQABloomProcessor(object):
             if self.options.unicode_normalization:
                 ft = unicodedata.normalize(self.options.unicode_normalization, ft)
             result["subtokens"] = subtokens(
-                ft, language=language, unicode_normalize=None
+                ft,
+                language=language,
+                unicode_normalize=None,
+                min_length=self.min_subtoken_length,
             )
             result["char_length"] = len(ft)
         return result
@@ -745,6 +751,12 @@ def parse_arguments(args: Optional[List[str]] = None) -> argparse.Namespace:
             " token that remains after applying some ocrqa-specific masking and"
             " splitting. (default: %(default)s)"
         ),
+    )
+    parser.add_argument(
+        "--min-subtoken-length",
+        type=int,
+        default=1,
+        help="Minimum length for normalized subtokens to retain (default: %(default)s)",
     )
     parser.add_argument(
         "--git-version",
